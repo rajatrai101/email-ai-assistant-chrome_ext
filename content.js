@@ -7,7 +7,7 @@ console.log("Gmail AI Reply Assistant content script loaded.");
 
 // --- Globals ---
 // IMPORTANT: The user should add their Gemini API Key in the extension's popup.
-let GEMINI_API_KEY = ""; 
+let GEMINI_API_KEY = "";
 
 // --- Main Initialization ---
 // Load the API key from storage and then initialize the UI observer.
@@ -76,14 +76,14 @@ function handleSuggestReplyClick() {
         alert("Please set your Gemini API Key in the extension's popup first!");
         return;
     }
-    
+
     const emailContent = getEmailThreadText();
     if (!emailContent) {
         console.error("Could not extract email content.");
         showSuggestionsModal({ error: "Could not read the email thread content. The Gmail layout might have changed." });
         return;
     }
-    
+
     showSuggestionsModal({ isLoading: true });
     generateReplies(emailContent);
 }
@@ -100,7 +100,7 @@ function getEmailThreadText() {
         console.warn("No message nodes found with selectors '.a3s.aiL, .adP'. Trying another selector.");
         // Fallback for different Gmail versions
         const fallbackNodes = document.querySelectorAll('div[data-message-id]');
-        if(fallbackNodes.length > 0) {
+        if (fallbackNodes.length > 0) {
             return Array.from(fallbackNodes).map(node => node.innerText).join('\n--- Next Message ---\n');
         }
         return null;
@@ -114,8 +114,16 @@ function getEmailThreadText() {
  * @param {string} [userInstruction=""] - Optional instruction from the user.
  */
 async function generateReplies(threadText, userInstruction = "") {
-    const prompt = `You are a helpful email assistant. Your goal is to suggest 3 concise, professional, and distinct replies to the following email thread. The last message in the thread is the most recent one to reply to.
-    
+    const prompt =
+        `You are a helpful email assistant. Your goal is to suggest 3 concise, professional, and distinct replies to the following email thread. The last message in the thread is the most recent one to reply to.
+
+Format each reply with proper email structure:
+1. Start with a salutation on its own line (e.g., "Hi [Name],")
+2. Add a blank line after the salutation
+3. Write the main content with appropriate paragraphs
+4. Add a blank line before the closing
+5. End with a closing and your name on separate lines (e.g., "Best regards,\nRajat")
+
 ${userInstruction ? `An important instruction from the user to guide your response: "${userInstruction}"` : ''}
 
 Analyze the tone and context of the thread and generate appropriate responses.
@@ -124,7 +132,10 @@ Analyze the tone and context of the thread and generate appropriate responses.
 ${threadText}
 --- EMAIL THREAD END ---
 
-Please provide the 3 suggestions in a JSON array of strings.`;
+Please provide the 3 suggestions in a JSON array of strings. Use \\n for newlines to create proper spacing.
+
+Example format:
+["Hi [Name],\\n\\nThank you for your email.\\n\\nBest regards,\\nRajat"]`;
 
     const payload = {
         contents: [{
@@ -140,7 +151,7 @@ Please provide the 3 suggestions in a JSON array of strings.`;
             }
         }
     };
-    
+
     const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
 
     try {
@@ -211,16 +222,16 @@ function showSuggestionsModal(state) {
         // Optional user input field
         const instructionContainer = document.createElement('div');
         instructionContainer.className = 'ai-instruction-container';
-        
+
         const instructionInput = document.createElement('input');
         instructionInput.type = 'text';
         instructionInput.id = 'ai-user-instruction';
         instructionInput.placeholder = 'Optional: Add a note to refine (e.g., "be more formal")';
-        
+
         const refineButton = document.createElement('button');
         refineButton.textContent = 'Refine';
         refineButton.className = 'ai-refine-button';
-        
+
         refineButton.onclick = () => {
             const instruction = instructionInput.value;
             if (instruction) {
@@ -233,7 +244,7 @@ function showSuggestionsModal(state) {
         instructionContainer.appendChild(instructionInput);
         instructionContainer.appendChild(refineButton);
         modalContent.appendChild(instructionContainer);
-        
+
         const list = document.createElement('div');
         list.className = 'ai-suggestions-list';
         state.suggestions.forEach(text => {
@@ -259,16 +270,33 @@ function showSuggestionsModal(state) {
  * @param {string} text - The text to insert.
  */
 function insertReply(text) {
-    // Gmail's reply box has a specific ARIA label.
+    console.log("Inserting reply text:", text);
     const replyBox = document.querySelector('div[aria-label="Message Body"]');
     if (replyBox) {
-        // Convert newlines to <br> and preserve spaces for HTML content
-        const formattedText = text
-            .replace(/  /g, '&nbsp;&nbsp;') // Preserve double spaces
-            .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;') // Preserve tabs
-            .replace(/\n/g, '<br>');
-        replyBox.innerHTML = formattedText;
+        // Create a temporary div with pre-wrap style to preserve formatting
+        const tempDiv = document.createElement('div');
+        tempDiv.style.whiteSpace = 'pre-wrap';
+        
+        // Process the text - convert escaped newlines to actual newlines
+        const processedText = text
+            .replace(/\\n/g, '\n')  // Convert escaped newlines to actual newlines
+            .replace(/\n/g, '<br>'); // Convert newlines to line breaks
+            
+        // Set the content
+        tempDiv.innerHTML = processedText;
+        
+        // Focus the reply box and insert the formatted content
         replyBox.focus();
+        replyBox.innerHTML = ''; // Clear existing content
+        replyBox.innerHTML = tempDiv.innerHTML;
+        
+        // Move cursor to the end
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(replyBox);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
     } else {
         console.error("Could not find the Gmail reply box.");
         alert("Could not find the reply box to insert the text.");
