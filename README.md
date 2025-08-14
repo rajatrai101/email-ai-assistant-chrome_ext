@@ -25,7 +25,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
     *   Click "Create API key in new project".
     *   Copy the generated API key.
 
-2.  **Save your API Key:**
+2.  **Set up environment variables:**
+    *   Copy `.env.example` to a new file named `.env`
+    *   Replace `your_api_key_here` with your actual Gemini API key
+    *   Never commit the `.env` file to version control
+
+3.  **Save your API Key:**
     *   Click the puzzle piece icon in your Chrome toolbar and pin the "Gmail AI Reply Assistant" extension.
     *   Click on the extension's icon.
     *   Paste your Gemini API key into the input box and click "Save Key".
