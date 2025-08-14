@@ -30,11 +30,18 @@ chrome.storage.sync.get(['geminiApiKey'], (result) => {
  */
 function initializeObserver() {
     const observer = new MutationObserver((mutations, obs) => {
-        // Find the main toolbar in an open email view. This is a common selector.
-        const toolbar = document.querySelector('.G-tF');
-        if (toolbar && !document.getElementById('ai-reply-button')) {
-            console.log("Email view detected. Injecting button.");
-            createAiButton(toolbar);
+        // Find the email content area
+        const emailContent = document.querySelector('.a3s.aiL');
+        if (emailContent && !document.getElementById('ai-reply-container')) {
+            console.log("Email view detected. Injecting UI and generating suggestions.");
+            const container = createSuggestionsContainer(emailContent);
+            
+            // Generate suggestions immediately
+            const threadText = getEmailThreadText();
+            if (threadText) {
+                showSuggestionsInline(container.suggestionsContainer, { isLoading: true });
+                generateReplies(threadText, container.userInput.value, false, container.suggestionsContainer);
+            }
         }
     });
 
@@ -48,30 +55,51 @@ function initializeObserver() {
  * Creates and injects the "Suggest Reply" button into the Gmail UI.
  * @param {HTMLElement} parentElement - The element to append the button to.
  */
-function createAiButton(parentElement) {
-    const button = document.createElement('div');
-    button.id = 'ai-reply-button';
-    button.className = 'ai-button T-I J-J5-Ji T-I-Js-IF N-I-Js-IF ar7 L3';
-    button.textContent = '✨ Suggest Reply';
-    button.setAttribute('role', 'button');
-    button.setAttribute('tabindex', '0');
-    button.setAttribute('data-tooltip', 'Generate AI-powered reply suggestions');
+function createSuggestionsContainer(parentElement) {
+    const container = document.createElement('div');
+    container.id = 'ai-reply-container';
+    container.style.marginTop = '16px';
+    container.style.marginBottom = '16px';
 
-    button.addEventListener('click', handleSuggestReplyClick);
+    // Create user input container
+    const inputContainer = document.createElement('div');
+    inputContainer.className = 'ai-input-container';
 
-    // Prepend to a container within the toolbar for better placement
-    const buttonContainer = parentElement.querySelector('.G-tF-T-I');
-    if (buttonContainer) {
-        buttonContainer.prepend(button);
-    } else {
-        parentElement.prepend(button);
-    }
+    const userInput = document.createElement('input');
+    userInput.type = 'text';
+    userInput.className = 'ai-user-input';
+    userInput.placeholder = 'Add your instructions for the AI response (e.g., "make it formal", "add meeting details")';
+
+    const refreshButton = document.createElement('button');
+    refreshButton.className = 'ai-refresh-button';
+    refreshButton.innerHTML = '↻ Regenerate';
+    refreshButton.onclick = () => {
+        const threadText = getEmailThreadText();
+        if (threadText) {
+            showSuggestionsInline(suggestionsContainer, { isLoading: true });
+            generateReplies(threadText, userInput.value, false, suggestionsContainer);
+        }
+    };
+
+    inputContainer.appendChild(userInput);
+    inputContainer.appendChild(refreshButton);
+    container.appendChild(inputContainer);
+
+    // Create suggestions container
+    const suggestionsContainer = document.createElement('div');
+    suggestionsContainer.id = 'ai-suggestions-container';
+    suggestionsContainer.className = 'ai-suggestions-container';
+
+    container.appendChild(suggestionsContainer);
+    parentElement.insertAdjacentElement('afterend', container);
+
+    return { container, suggestionsContainer, userInput };
 }
 
 /**
  * Handles the click event on the "Suggest Reply" button.
  */
-function handleSuggestReplyClick() {
+function handleSuggestReplyClick(suggestionsContainer) {
     if (!GEMINI_API_KEY) {
         alert("Please set your Gemini API Key in the extension's popup first!");
         return;
@@ -80,12 +108,16 @@ function handleSuggestReplyClick() {
     const emailContent = getEmailThreadText();
     if (!emailContent) {
         console.error("Could not extract email content.");
-        showSuggestionsModal({ error: "Could not read the email thread content. The Gmail layout might have changed." });
+        showSuggestionsInline(suggestionsContainer, { error: "Could not read the email thread content. The Gmail layout might have changed." });
         return;
     }
 
-    showSuggestionsModal({ isLoading: true });
-    generateReplies(emailContent);
+    if (prefetchedSuggestions) {
+        showSuggestionsInline(suggestionsContainer, { suggestions: prefetchedSuggestions, prefetched: true });
+    } else {
+        showSuggestionsInline(suggestionsContainer, { isLoading: true });
+        generateReplies(emailContent, "", false, suggestionsContainer);
+    }
 }
 
 /**
@@ -113,18 +145,21 @@ function getEmailThreadText() {
  * @param {string} threadText - The text of the email thread.
  * @param {string} [userInstruction=""] - Optional instruction from the user.
  */
-async function generateReplies(threadText, userInstruction = "") {
+// Store prefetched suggestions
+let prefetchedSuggestions = null;
+
+async function generateReplies(threadText, userInstruction = "", isPrefetch = false, suggestionsContainer = null) {
     const prompt =
         `You are a helpful email assistant. Your goal is to suggest 3 concise, professional, and distinct replies to the following email thread. The last message in the thread is the most recent one to reply to.
+
+${userInstruction ? `IMPORTANT: Follow these user instructions for the response: "${userInstruction}"` : ''}
 
 Format each reply with proper email structure:
 1. Start with a salutation on its own line (e.g., "Hi [Name],")
 2. Add a blank line after the salutation
-3. Write the main content with appropriate paragraphs
+3. Write the main content with appropriate paragraphs, incorporating any user instructions
 4. Add a blank line before the closing
 5. End with a closing and your name on separate lines (e.g., "Best regards,\nRajat")
-
-${userInstruction ? `An important instruction from the user to guide your response: "${userInstruction}"` : ''}
 
 Analyze the tone and context of the thread and generate appropriate responses.
 
@@ -169,8 +204,13 @@ Example format:
         const result = await response.json();
         const suggestionsText = result.candidates[0].content.parts[0].text;
         const suggestions = JSON.parse(suggestionsText);
-        showSuggestionsModal({ suggestions });
-
+        
+        if (isPrefetch) {
+            prefetchedSuggestions = suggestions;
+            console.log("Suggestions prefetched successfully");
+        } else if (suggestionsContainer) {
+            showSuggestionsInline(suggestionsContainer, { suggestions, prefetched: prefetchedSuggestions });
+        }
     } catch (error) {
         console.error("Error calling Gemini API:", error);
         showSuggestionsModal({ error: error.message });
@@ -219,6 +259,13 @@ function showSuggestionsModal(state) {
         errorDiv.textContent = `An error occurred: ${state.error}`;
         modalContent.appendChild(errorDiv);
     } else if (state.suggestions) {
+        if (state.prefetched) {
+            const prefetchNotice = document.createElement('div');
+            prefetchNotice.className = 'ai-prefetch-notice';
+            prefetchNotice.innerHTML = '✨ Suggestions were pre-generated for faster response';
+            modalContent.appendChild(prefetchNotice);
+        }
+
         // Optional user input field
         const instructionContainer = document.createElement('div');
         instructionContainer.className = 'ai-instruction-container';
@@ -247,13 +294,14 @@ function showSuggestionsModal(state) {
 
         const list = document.createElement('div');
         list.className = 'ai-suggestions-list';
-        state.suggestions.forEach(text => {
-            const item = document.createElement('div');
-            item.className = 'ai-suggestion-item';
-            // Use innerHTML to render line breaks
-            item.innerHTML = text.replace(/\n/g, '<br>');
+        state.suggestions.forEach((text, index) => {
+            const item = document.createElement('button');
+            item.className = 'ai-suggestion-button';
+            // Create a preview of the text (first line after salutation)
+            const preview = text.split('\\n').slice(0, 3).join(' ').substring(0, 100) + '...';
+            item.innerHTML = `Suggestion ${index + 1}: ${preview}`;
             item.onclick = () => {
-                insertReply(text);
+                insertAndSendReply(text);
                 modal.remove();
             };
             list.appendChild(item);
@@ -300,6 +348,96 @@ function insertReply(text) {
     } else {
         console.error("Could not find the Gmail reply box.");
         alert("Could not find the reply box to insert the text.");
+    }
+}
+
+/**
+ * Inserts the reply text using Reply All
+ * @param {string} text - The text to insert
+ */
+async function insertAndSendReply(text) {
+    // Click "Reply all" button if it exists, otherwise click "Reply"
+    const replyAllButton = document.querySelector('[aria-label="Reply to all"]');
+    const replyButton = document.querySelector('[aria-label="Reply"]');
+    
+    if (replyAllButton) {
+        replyAllButton.click();
+    } else if (replyButton) {
+        replyButton.click();
+    } else {
+        console.error("Could not find reply button");
+        return;
+    }
+
+    // Wait for the reply box to appear
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Insert the reply text
+    const replyBox = document.querySelector('div[aria-label="Message Body"]');
+    if (replyBox) {
+        const tempDiv = document.createElement('div');
+        tempDiv.style.whiteSpace = 'pre-wrap';
+
+        const processedText = text
+            .replace(/\\n/g, '\n')
+            .replace(/\n/g, '<br>');
+
+        tempDiv.innerHTML = processedText;
+        replyBox.focus();
+        replyBox.innerHTML = tempDiv.innerHTML;
+
+        // Move cursor to the end of the content
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(replyBox);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+}
+
+/**
+ * Shows suggestions inline below the email content
+ * @param {HTMLElement} container - The container to show suggestions in
+ * @param {object} state - The state object containing suggestions or loading state
+ */
+function showSuggestionsInline(container, state) {
+    // Clear existing content
+    container.innerHTML = '';
+
+    if (state.isLoading) {
+        const loader = document.createElement('div');
+        loader.className = 'ai-loader';
+        loader.textContent = 'Generating suggestions...';
+        container.appendChild(loader);
+    } else if (state.error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'ai-error-message';
+        errorDiv.textContent = `An error occurred: ${state.error}`;
+        container.appendChild(errorDiv);
+    } else if (state.suggestions) {
+        if (state.prefetched) {
+            const prefetchNotice = document.createElement('div');
+            prefetchNotice.className = 'ai-prefetch-notice';
+            prefetchNotice.innerHTML = '✨ Suggestions ready';
+            container.appendChild(prefetchNotice);
+        }
+
+        const list = document.createElement('div');
+        list.className = 'ai-suggestions-list';
+        
+        state.suggestions.forEach((text, index) => {
+            const item = document.createElement('button');
+            item.className = 'ai-suggestion-button';
+            const preview = text.split('\\n').slice(0, 3).join(' ').substring(0, 100) + '...';
+            item.innerHTML = `Suggestion ${index + 1}: ${preview}`;
+            item.onclick = () => {
+                insertAndSendReply(text);
+            };
+            list.appendChild(item);
+        });
+        
+        container.appendChild(list);
     }
 }
 

@@ -15,61 +15,57 @@
 
 
 /* --- Suggestions Modal --- */
-#ai-suggestion-modal {
-    position: fixed;
-    z-index: 2000; /* High z-index to be on top of Gmail UI */
-    left: 0;
-    top: 0;
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-    background-color: rgba(0,0,0,0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+.ai-suggestions-container {
+    margin-top: 8px;
     font-family: 'Google Sans', Roboto, Arial, sans-serif;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
-.ai-modal-content {
-    background-color: #fefefe;
-    margin: auto;
-    padding: 20px 30px;
-    border: 1px solid #888;
-    width: 80%;
-    max-width: 600px;
-    border-radius: 16px;
-    box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2), 0 6px 20px 0 rgba(0,0,0,0.19);
-    animation-name: animatetop;
-    animation-duration: 0.4s;
-    position: relative;
+.ai-input-container {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
 }
 
-@keyframes animatetop {
-    from {top: -300px; opacity: 0}
-    to {top: 0; opacity: 1}
+.ai-user-input {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #dadce0;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 14px;
+    color: #3c4043;
 }
 
-.ai-modal-close {
-    color: #aaa;
-    float: right;
-    font-size: 28px;
-    font-weight: bold;
-    position: absolute;
-    top: 10px;
-    right: 20px;
+.ai-user-input:focus {
+    outline: none;
+    border-color: #1a73e8;
 }
 
-.ai-modal-close:hover,
-.ai-modal-close:focus {
-    color: black;
-    text-decoration: none;
+.ai-refresh-button {
+    padding: 8px 16px;
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    border-radius: 8px;
     cursor: pointer;
+    font-family: inherit;
+    font-size: 14px;
+    transition: background-color 0.2s;
 }
 
-.ai-modal-content h2 {
-    font-size: 22px;
-    color: #333;
-    margin-bottom: 20px;
+.ai-refresh-button:hover {
+    background-color: #1557b0;
+}
+
+.ai-suggestions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 12px;
 }
 
 .ai-loader {
@@ -94,20 +90,54 @@
     overflow-y: auto;
 }
 
-.ai-suggestion-item {
-    background-color: #f1f3f4;
-    border-radius: 12px;
-    padding: 15px;
-    margin-bottom: 12px;
+.ai-suggestion-button {
+    width: 100%;
+    background-color: white;
+    color: #1a73e8;
+    border: 1px solid #1a73e8;
+    border-radius: 8px;
+    padding: 12px;
     cursor: pointer;
-    transition: background-color 0.2s ease;
-    white-space: pre-wrap; /* Preserve newlines */
-    font-size: 15px;
+    transition: all 0.2s ease;
+    font-size: 14px;
     line-height: 1.5;
+    text-align: left;
+    font-family: 'Google Sans', Roboto, Arial, sans-serif;
 }
 
-.ai-suggestion-item:hover {
-    background-color: #e8eaed;
+.ai-suggestion-button:hover {
+    background-color: #f8f9fa;
+}
+
+.ai-loader {
+    text-align: center;
+    color: #5f6368;
+    padding: 12px;
+}
+
+.ai-error-message {
+    color: #d93025;
+    padding: 12px;
+    background-color: #fce8e6;
+    border-radius: 4px;
+}
+
+.ai-prefetch-notice {
+    color: #188038;
+    font-size: 13px;
+    margin-bottom: 8px;
+}
+
+.ai-prefetch-notice {
+    color: #1e8e3e;
+    font-size: 13px;
+    margin-bottom: 15px;
+    padding: 8px;
+    background: #e6f4ea;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .ai-instruction-container {
