@@ -239,7 +239,8 @@ function showSuggestionsModal(state) {
         state.suggestions.forEach(text => {
             const item = document.createElement('div');
             item.className = 'ai-suggestion-item';
-            item.textContent = text;
+            // Use innerHTML to render line breaks
+            item.innerHTML = text.replace(/\n/g, '<br>');
             item.onclick = () => {
                 insertReply(text);
                 modal.remove();
@@ -261,8 +262,12 @@ function insertReply(text) {
     // Gmail's reply box has a specific ARIA label.
     const replyBox = document.querySelector('div[aria-label="Message Body"]');
     if (replyBox) {
-        // Convert newlines to <br> for HTML content
-        replyBox.innerHTML = text.replace(/\n/g, '<br>');
+        // Convert newlines to <br> and preserve spaces for HTML content
+        const formattedText = text
+            .replace(/  /g, '&nbsp;&nbsp;') // Preserve double spaces
+            .replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;') // Preserve tabs
+            .replace(/\n/g, '<br>');
+        replyBox.innerHTML = formattedText;
         replyBox.focus();
     } else {
         console.error("Could not find the Gmail reply box.");

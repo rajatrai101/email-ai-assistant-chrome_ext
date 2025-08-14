@@ -1,47 +1,34 @@
-1. Get a Gemini API Key
-First, you need an API key to use the AI.
+# Gmail AI Reply Assistant
 
-Go to Google AI Studio.
+This Chrome extension uses AI to suggest replies to your emails directly in Gmail.
 
-Click "Create API key in new project".
+## Installation
 
-Copy the generated API key. You will need it in a later step.
+1.  **Download the extension files:**
+    *   Create a new folder on your computer named `gmail-ai-assistant`.
+    *   Save all the files from this repository into that folder.
 
-2. Save the Extension Files
-Create a new folder on your computer named gmail-ai-assistant.
+2.  **Load the extension in Chrome:**
+    *   Open Google Chrome and navigate to `chrome://extensions`.
+    *   In the top right corner, turn on "Developer mode".
+    *   Click on "Load unpacked".
+    *   Select the `gmail-ai-assistant` folder.
 
-Inside that folder, save each of the code blocks above into files with their corresponding names:
+## Configuration
 
-manifest.json
+1.  **Get a Gemini API Key:**
+    *   Go to [Google AI Studio](https://aistudio.google.com/).
+    *   Click "Create API key in new project".
+    *   Copy the generated API key.
 
-content.js
+2.  **Save your API Key:**
+    *   Click the puzzle piece icon in your Chrome toolbar and pin the "Gmail AI Reply Assistant" extension.
+    *   Click on the extension's icon.
+    *   Paste your Gemini API key into the input box and click "Save Key".
 
-styles.css
+## Usage
 
-popup.html
-
-popup.js
-
-Create or download a 128x128 pixel PNG image, name it icon.png, and save it in the same folder.
-
-3. Load the Extension in Chrome
-Open Google Chrome and navigate to chrome://extensions.
-
-In the top right corner, turn on "Developer mode".
-
-Three new buttons will appear: "Load unpacked," "Pack extension," and "Update." Click on "Load unpacked".
-
-A file selection dialog will open. Navigate to and select the gmail-ai-assistant folder you created.
-
-4. Configure and Use the Extension
-The "Gmail AI Reply Assistant" extension will now appear in your list of extensions. Click the puzzle piece icon in your Chrome toolbar and pin the extension for easy access.
-
-Click on the extension's icon. A popup will appear.
-
-Paste the Gemini API key you got from step 1 into the input box and click "Save Key".
-
-Go to your Gmail and open any email. You should see a new purple "✨ Suggest Reply" button near the top of the email.
-
-Click the button. A modal will appear, and after a few seconds, it will show you three reply suggestions.
-
-You can click any suggestion to instantly paste it into the reply box! You can also type a note and click "Refine" to get new suggestions based on your input.
+1.  Open any email in Gmail.
+2.  Click the "✨ Suggest Reply" button.
+3.  Three reply suggestions will appear. Click one to paste it into the reply box.
+4.  You can also type a note and click "Refine" to get new suggestions.
