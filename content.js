@@ -276,20 +276,20 @@ function insertReply(text) {
         // Create a temporary div with pre-wrap style to preserve formatting
         const tempDiv = document.createElement('div');
         tempDiv.style.whiteSpace = 'pre-wrap';
-        
+
         // Process the text - convert escaped newlines to actual newlines
         const processedText = text
             .replace(/\\n/g, '\n')  // Convert escaped newlines to actual newlines
             .replace(/\n/g, '<br>'); // Convert newlines to line breaks
-            
+
         // Set the content
         tempDiv.innerHTML = processedText;
-        
+
         // Focus the reply box and insert the formatted content
         replyBox.focus();
         replyBox.innerHTML = ''; // Clear existing content
         replyBox.innerHTML = tempDiv.innerHTML;
-        
+
         // Move cursor to the end
         const selection = window.getSelection();
         const range = document.createRange();
